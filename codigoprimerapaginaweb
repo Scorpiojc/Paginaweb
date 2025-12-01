@@ -2,176 +2,513 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>GameSpace Zone</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GameSpace Zone | Home</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg-dark: #050814;
+            --bg-panel: rgba(12, 18, 40, 0.8);
+            --accent: #7b6dff;
+            --accent-2: #25e0a4;
+            --accent-3: #ff5f6c;
+            --text-main: #f3f4ff;
+            --text-muted: #c4c7f5;
+            --border: rgba(123, 130, 255, 0.25);
+            --glow: 0 0 24px rgba(37, 224, 164, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: radial-gradient(circle at top, #1b2b4a, #050814);
-            color: #f5f5f5;
+            background: radial-gradient(circle at 20% 20%, rgba(123, 109, 255, 0.08), transparent 28%),
+                        radial-gradient(circle at 80% 0%, rgba(37, 224, 164, 0.08), transparent 32%),
+                        linear-gradient(145deg, #0c1228 0%, #050814 60%, #04060f 100%);
+            color: var(--text-main);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            scroll-behavior: smooth;
         }
+
         header {
-            padding: 1.5rem 8vw;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(12px);
+            background: linear-gradient(90deg, rgba(5, 8, 20, 0.9), rgba(5, 8, 20, 0.7));
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 8vw;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
         }
+
         .logo {
-            font-weight: 700;
+            font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
+            color: var(--accent-2);
+            text-shadow: 0 0 12px rgba(37, 224, 164, 0.6);
         }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: clamp(0.75rem, 2vw, 1.5rem);
+        }
+
         nav a {
-            margin-left: 1rem;
             text-decoration: none;
-            color: #d0d4ff;
+            color: var(--text-muted);
             font-size: 0.95rem;
+            letter-spacing: 0.02em;
+            position: relative;
+            padding-bottom: 0.25rem;
         }
-        nav a:hover { text-decoration: underline; }
+
+        nav a::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 2px;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            transition: width 0.2s ease;
+            box-shadow: var(--glow);
+        }
+
+        nav a:hover::after,
+        nav a:focus-visible::after {
+            width: 100%;
+        }
 
         .hero {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 2rem 8vw 3rem;
-        }
-        .hero h1 {
-            font-size: clamp(2.2rem, 5vw, 3.2rem);
-            margin-bottom: 0.8rem;
-        }
-        .hero p {
-            max-width: 600px;
-            font-size: 1rem;
-            line-height: 1.5;
-            color: #c6c9f5;
-            margin-bottom: 1.5rem;
-        }
-        .hero-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-        }
-        .btn {
-            border: none;
-            padding: 0.7rem 1.3rem;
-            border-radius: 999px;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-        .btn-primary {
-            background: #ff5f6c;
-            color: white;
-        }
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid #7b82ff;
-            color: #d0d4ff;
+            padding: clamp(2rem, 6vw, 4rem) 8vw 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            align-items: center;
         }
 
-        main {
-            padding: 0 8vw 3rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 1.5rem;
+        .hero-copy h1 {
+            font-size: clamp(2.4rem, 6vw, 3.6rem);
+            margin-bottom: 0.8rem;
+            line-height: 1.1;
         }
-        .card {
-            background: rgba(12, 18, 40, 0.9);
-            border-radius: 1rem;
-            padding: 1.1rem 1.2rem;
-            border: 1px solid rgba(123, 130, 255, 0.25);
+
+        .hero-copy p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 1.3rem;
+            max-width: 640px;
         }
-        .card h2 {
-            font-size: 1.1rem;
-            margin-bottom: 0.4rem;
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
         }
-        .card p {
-            font-size: 0.9rem;
-            color: #c6c9f5;
-            line-height: 1.4;
+
+        .btn {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.75rem 1.4rem;
+            color: var(--text-main);
+            background: transparent;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
-        footer {
-            padding: 1rem 8vw 1.5rem;
+
+        .btn-primary {
+            background: linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 100%);
+            border: none;
+            box-shadow: 0 12px 32px rgba(123, 109, 255, 0.35);
+        }
+
+        .btn-secondary {
+            border-color: rgba(37, 224, 164, 0.6);
+        }
+
+        .btn:hover,
+        .btn:focus-visible {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), var(--glow);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(37, 224, 164, 0.12);
+            color: var(--accent-2);
             font-size: 0.8rem;
-            color: #9aa0d8;
+            letter-spacing: 0.02em;
+            border: 1px solid rgba(37, 224, 164, 0.35);
+        }
+
+        .panels {
+            padding: 0 8vw 4rem;
+            display: grid;
+            gap: 2rem;
+        }
+
+        section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 1.4rem;
+            padding: clamp(1.25rem, 4vw, 2rem);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-main);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .card {
+            background: rgba(10, 15, 32, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            min-height: 180px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(123, 109, 255, 0.45);
+        }
+
+        .card h3 {
+            font-size: 1.05rem;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .card .tag {
+            font-size: 0.8rem;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+        }
+
+        .link-btn {
+            margin-top: auto;
+            align-self: flex-start;
+            color: var(--accent-2);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .downloads-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .download-item {
+            padding: 0.9rem 1rem;
+            border-radius: 0.9rem;
+            border: 1px dashed rgba(123, 130, 255, 0.35);
+            background: rgba(9, 12, 24, 0.7);
+        }
+
+        .download-item strong { display: block; margin-bottom: 0.25rem; }
+
+        .download-item span { color: var(--text-muted); font-size: 0.92rem; }
+
+        .about-block {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            align-items: center;
+        }
+
+        .about-text { color: var(--text-muted); line-height: 1.6; }
+
+        .pill-list { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+        .pill {
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(123, 109, 255, 0.15);
+            border: 1px solid rgba(123, 109, 255, 0.4);
+            color: var(--text-main);
+            font-size: 0.88rem;
+        }
+
+        form {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border-radius: 0.7rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        textarea { min-height: 120px; resize: vertical; }
+
+        footer {
+            padding: 1.2rem 8vw 1.8rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
             text-align: center;
+            display: grid;
+            gap: 0.4rem;
+        }
+
+        .footer-links { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+
+        .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; }
+
+        @media (max-width: 720px) {
+            header { padding: 1rem 6vw; }
+            nav { display: grid; grid-template-columns: repeat(3, auto); justify-items: end; }
+            .hero { padding: 2.2rem 6vw 3rem; }
+            .panels { padding: 0 6vw 3rem; }
         }
     </style>
 </head>
 <body>
     <header>
         <div class="logo">GameSpace Zone</div>
-        <nav>
-            <a href="#projects">Projects</a>
+        <nav aria-label="Primary">
+            <a href="#home">Home</a>
+            <a href="#games">Games</a>
+            <a href="#experiments">Experiments</a>
             <a href="#downloads">Downloads</a>
             <a href="#about">About</a>
+            <a href="#contact">Contact</a>
         </nav>
     </header>
 
-    <section class="hero">
-        <h1>Welcome to GameSpace Zone</h1>
-        <p>
-            A small universe where I experiment with games, apps and ideas.
-            Here you'll find prototypes, learning projects and tools mixing
-            code, creativity and a bit of science.
-        </p>
-        <div class="hero-buttons">
-            <button class="btn btn-primary">View projects (soon)</button>
-            <button class="btn btn-secondary">Join the journey</button>
-        </div>
-    </section>
-        .game-list {
-            margin-top: 0.6rem;
-            padding-left: 1.1rem;
-        }
-        .game-list li {
-            margin-bottom: 0.3rem;
-            font-size: 0.9rem;
-        }
-        .game-list a {
-            color: #d0d4ff;
-            text-decoration: none;
-        }
-        .game-list a:hover {
-            text-decoration: underline;
-        }
-
     <main>
-    <article class="card" id="projects">
-        <h2>Game prototypes</h2>
-        <p>
-         Mini-games made while I learn game development: simple
-         browser games, experiments with mechanics and small
-            interactive stories.
-        </p>
-     <ul class="game-list">
-         <li>
-             <a href="/games/star-dodge.html">
-                 Star Dodge – dodge the meteors and survive as long as you can
-             </a>
-         </li>
-        </ul>
-    </article>
+        <section class="hero" id="home">
+            <div class="hero-copy">
+                <p class="badge">Personal playground • doctor · gamer · learner</p>
+                <h1>Welcome to GameSpace Zone</h1>
+                <p>
+                    A tiny galaxy of browser games, AI experiments, and digital goodies crafted
+                    by a general practitioner in Spain who loves astrophotography, gaming, and
+                    learning to build interactive worlds. Dive in, test ideas, and watch this
+                    indie lab evolve.
+                </p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="#games">Play a game</a>
+                    <a class="btn btn-secondary" href="#experiments">See projects</a>
+                </div>
+            </div>
+            <div>
+                <div class="card" style="height: auto;">
+                    <span class="tag">Mission log</span>
+                    <h3>Next uploads</h3>
+                    <p>
+                        • New browser mini-games in testing.
+                        <br />• Night-sky captures with my Seestar S50.
+                        <br />• Printable guides for fellow devs & gamers.
+                    </p>
+                    <span class="pill" style="margin-top: 0.6rem; width: fit-content;">Always a work in progress</span>
+                </div>
+            </div>
+        </section>
 
-        <article class="card" id="about">
-            <h2>About GameSpace Zone</h2>
-            <p>
-                I'm a doctor who also loves games, code and the night sky.
-                This site is my personal playground to learn, create and
-                share what I build along the way.
-            </p>
-        </article>
+        <div class="panels">
+            <section id="games" aria-labelledby="games-title">
+                <div class="section-title" id="games-title">Games</div>
+                <div class="grid">
+                    <div class="card">
+                        <span class="tag">Play now</span>
+                        <h3>Star Dodge</h3>
+                        <p>
+                            Move with the left / right arrows and dodge incoming meteorites.
+                            A quick reflex challenge to survive the longest night.
+                        </p>
+                        <a class="link-btn" href="/games/star-dodge.html">Play now →</a>
+                    </div>
+                    <div class="card">
+                        <span class="tag">Coming soon</span>
+                        <h3>Pulse Runner</h3>
+                        <p>
+                            Endless neon runner inspired by heartbeats and rhythm. Built as I learn
+                            timing and level pacing.
+                        </p>
+                        <a class="link-btn" href="#">Stay tuned →</a>
+                    </div>
+                    <div class="card">
+                        <span class="tag">Coming soon</span>
+                        <h3>Orbit Rescue</h3>
+                        <p>
+                            Rescue stranded satellites while managing fuel and gravity. A tribute
+                            to stargazing nights with my telescope.
+                        </p>
+                        <a class="link-btn" href="#">In fabrication →</a>
+                    </div>
+                    <div class="card">
+                        <span class="tag">Prototype</span>
+                        <h3>Clinic Defender</h3>
+                        <p>
+                            Light tower-defense where med-bots protect a digital clinic from virus
+                            waves. Built to blend my medical side with gaming.
+                        </p>
+                        <a class="link-btn" href="#">Prototype updates →</a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="experiments" aria-labelledby="experiments-title">
+                <div class="section-title" id="experiments-title">Experiments</div>
+                <div class="grid">
+                    <div class="card">
+                        <span class="tag">Work in progress</span>
+                        <h3>AI Prompt Lab</h3>
+                        <p>
+                            Quick scripts to test generative AI prompts for sprites, stories, and
+                            tiny quests. Learning how to tune prompts for consistent styles.
+                        </p>
+                        <a class="link-btn" href="#">Open soon →</a>
+                    </div>
+                    <div class="card">
+                        <span class="tag">Prototype</span>
+                        <h3>Space Moodboard</h3>
+                        <p>
+                            A mosaic of my astrophotography shots (Seestar S50) blended with color
+                            palettes for UI ideas.
+                        </p>
+                        <a class="link-btn" href="#">Preview →</a>
+                    </div>
+                    <div class="card">
+                        <span class="tag">Learning</span>
+                        <h3>Medical Mini-tools</h3>
+                        <p>
+                            Small utilities for clinicians-in-training: timers, checklists,
+                            calculators — built while I practice frontend patterns.
+                        </p>
+                        <a class="link-btn" href="#">See roadmap →</a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="downloads" aria-labelledby="downloads-title">
+                <div class="section-title" id="downloads-title">Downloads</div>
+                <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">
+                    Freebies and future premium packs for devs, gamers, and astro fans: PDFs,
+                    wallpapers, trackers, and resource bundles to fund new experiments.
+                </p>
+                <div class="downloads-list">
+                    <div class="download-item">
+                        <strong>Spacey HUD wallpapers</strong>
+                        <span>Free download • desktop & mobile sizes</span>
+                    </div>
+                    <div class="download-item">
+                        <strong>Dev checklist</strong>
+                        <span>Printable starter checklist for publishing mini-games</span>
+                    </div>
+                    <div class="download-item">
+                        <strong>Future: AI prompt pack</strong>
+                        <span>Soon: paid bundle with sprite + narrative prompt recipes</span>
+                    </div>
+                    <div class="download-item">
+                        <strong>Future: Astro poster set</strong>
+                        <span>Night-sky shots from my Seestar S50 as printable posters</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="about" aria-labelledby="about-title">
+                <div class="section-title" id="about-title">About</div>
+                <div class="about-block">
+                    <div class="card" style="min-height: auto;">
+                        <span class="tag">Hi! I'm the human behind the lab</span>
+                        <p class="about-text">
+                            I'm a general practitioner living in Spain, a gamer at heart, and a
+                            night-sky fan who captures galaxies with a Seestar S50 telescope.
+                            GameSpace Zone is my personal playground to learn game development,
+                            frontend craft, and small AI experiments. Everything here is honest,
+                            scrappy, and built with curiosity.
+                        </p>
+                    </div>
+                    <div class="card" style="min-height: auto;">
+                        <span class="tag">Focus areas</span>
+                        <div class="pill-list">
+                            <span class="pill">Browser mini-games</span>
+                            <span class="pill">AI-powered helpers</span>
+                            <span class="pill">Astrophotography</span>
+                            <span class="pill">Medical-inspired ideas</span>
+                            <span class="pill">Learning in public</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" aria-labelledby="contact-title">
+                <div class="section-title" id="contact-title">Contact</div>
+                <p style="color: var(--text-muted); line-height: 1.6;">
+                    Got feedback, want to collaborate, or just want to say hi? Drop a note below.
+                    Newsletter and socials will arrive soon — for now, this inbox is always open.
+                </p>
+                <form>
+                    <div>
+                        <label class="tag" for="name">Name</label>
+                        <input id="name" name="name" type="text" placeholder="Your name" />
+                    </div>
+                    <div>
+                        <label class="tag" for="email">Email</label>
+                        <input id="email" name="email" type="email" placeholder="you@example.com" />
+                    </div>
+                    <div>
+                        <label class="tag" for="message">Message</label>
+                        <textarea id="message" name="message" placeholder="Ideas, collaborations, feedback..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Send message</button>
+                </form>
+            </section>
+        </div>
     </main>
 
     <footer>
-        © <span id="year"></span> GameSpace Zone – Work in progress.
-        <script>
-            document.getElementById('year').textContent = new Date().getFullYear();
-        </script>
+        <div>© <span id="year"></span> GameSpace Zone – Personal playground for games and ideas.</div>
+        <div class="footer-links">
+            <a href="#home">Home</a>
+            <a href="#games">Games</a>
+            <a href="#downloads">Downloads</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+        </div>
     </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
 </body>
 </html>
