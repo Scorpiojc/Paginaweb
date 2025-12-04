@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Doctor Defender – GameSpace Zone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root { color-scheme: dark; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #271a4a, #02010a);
+      color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .page {
+      padding: 16px 12px 32px;
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .instructions {
+      margin: 0 0 10px;
+      font-size: 14px;
+      opacity: 0.85;
+      text-align: center;
+    }
+
+    .game-wrapper {
+      position: relative;
+      background: radial-gradient(circle at top, #33214f, #050316);
+      border-radius: 24px;
+      padding: 12px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+    }
+
+    #gameCanvas {
+      display: block;
+      background: #050316;
+      border-radius: 18px;
+    }
+
+    .hud {
+      position: absolute;
+      top: 16px;
+      left: 0;
+      right: 0;
+      padding: 0 18px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .life-bar {
+      position: absolute;
+      top: 34px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 55%;
+      max-width: 220px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.7);
+      overflow: hidden;
+    }
+
+    .life-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #a3e635);
+      transition: width 0.15s ease-out;
+    }
+
+    #message {
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .touch-controls {
+      position: absolute;
+      left: 50%;
+      bottom: 10px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .touch-controls .vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .touch-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 16px;
+      border: none;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #e5e7eb;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+    }
+
+    .touch-btn:active {
+      transform: scale(0.94);
+    }
+
+    #shootBtn {
+      width: 56px;
+      height: 56px;
+      font-size: 26px;
+      background: radial-gradient(circle at top, #f97373, #be123c);
+    }
+
+    @media (max-width: 480px) {
+      #gameCanvas {
+        width: 320px;
+        height: 540px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <p class="instructions">
+      PC: WASD / Flechas + barra espaciadora · Móvil: botones táctiles.
+    </p>
+
+    <div class="game-wrapper">
+      <canvas id="gameCanvas" width="360" height="600"></canvas>
+
+      <div class="hud">
+        <div>Score: <span id="score">0</span></div>
+        <div>Level: <span id="level">1</span></div>
+      </div>
+
+      <div class="life-bar">
+        <div class="life-bar-fill" id="lifeFill"></div>
+      </div>
+
+      <div id="message"></div>
+
+      <div class="touch-controls">
+        <button class="touch-btn dir-btn" data-dir="left">◀</button>
+        <div class="vertical">
+          <button class="touch-btn dir-btn" data-dir="up">▲</button>
+          <button class="touch-btn dir-btn" data-dir="down">▼</button>
+        </div>
+        <button class="touch-btn dir-btn" data-dir="right">▶</button>
+        <button class="touch-btn" id="shootBtn">💊</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const scoreEl = document.getElementById("score");
+    const levelEl = document.getElementById("level");
+    const msgEl = document.getElementById("message");
+    const lifeFillEl = document.getElementById("lifeFill");
+
+    // ========= SPRITES DEL DOCTOR (3 FRAMES POR IMAGEN) =========
+    const DOCTOR_FRAMES = 3;
+    const DOCTOR_ANIM_INTERVAL = 0.12; // s
+
+    function loadSpriteSheet(path) {
+      const img = new Image();
+      const sprite = { img, loaded: false, frameW: 0, frameH: 0 };
+      img.src = path;
+      img.onload = () => {
+        sprite.loaded = true;
+        sprite.frameW = img.width / DOCTOR_FRAMES;
+        sprite.frameH = img.height;
+      };
+      return sprite;
+    }
+
+    const doctorSprites = {
+      up:    loadSpriteSheet("../images/doctor-up.png"),
+      left:  loadSpriteSheet("../images/doctor-left.png"),
+      right: loadSpriteSheet("../images/doctor-right.png")
+    };
+
+    // ========= ESTADO DEL DOCTOR =========
+    const doctor = {
+      x: canvas.width / 2,
+      y: canvas.height - 80,
+      w: 40,
+      h: 76,
+      speed: 160 * 1.2,   // 20% más rápido
+      radius: 18,
+      dir: "up",
+      hp: 30,
+      maxHp: 30,
+      frameIndex: 1,
+      animTimer: 0
+    };
+
+    function resetDoctor() {
+      doctor.x = canvas.width / 2;
+      doctor.y = canvas.height - 80;
+      doctor.dir = "up";
+      doctor.hp = doctor.maxHp;
+      doctor.frameIndex = 1;
+      doctor.animTimer = 0;
+    }
+
+    function currentDoctorSprite() {
+      if (doctor.dir === "left")  return doctorSprites.left;
+      if (doctor.dir === "right") return doctorSprites.right;
+      return doctorSprites.up;
+    }
+
+    function drawDoctor() {
+      const sprite = currentDoctorSprite();
+      if (!sprite.loaded) return;
+
+      const { img, frameW, frameH } = sprite;
+      const sx = frameW * doctor.frameIndex;
+      const sy = 0;
+
+      ctx.drawImage(
+        img,
+        sx, sy,
+        frameW, frameH,
+        doctor.x - doctor.w / 2,
+        doctor.y - doctor.h / 2,
+        doctor.w,
+        doctor.h
+      );
+    }
+
+    // ========= VIRUS =========
+    const VIRUS_CONFIG = {
+      small:  { radius: 9,  hp: 1, speed: 106, damage: 1,  score: 1 },
+      medium: { radius: 16, hp: 4, speed: 53, damage: 5,  score: 2 },
+      large:  { radius: 23, hp: 8, speed: 34, damage: 10, score: 3 }
+    };
+
+    let viruses = [];
+    let virusSpawnTimer = 0;
+    const BASE_SPAWN_INTERVAL = 1.6;
+
+    function currentSpawnInterval() {
+      const factor = Math.max(0.5, 1.0 - (level - 1) * 0.06);
+      return BASE_SPAWN_INTERVAL * factor;
+    }
+
+    function spawnVirus() {
+      const r = Math.random();
+      let type;
+      if (r < 0.65) type = "small";
+      else if (r < 0.9) type = "medium";
+      else type = "large";
+
+      const cfg = VIRUS_CONFIG[type];
+      const x = cfg.radius + Math.random() * (canvas.width - 2 * cfg.radius);
+      const y = -cfg.radius - 10;
+      viruses.push({
+        type,
+        x,
+        y,
+        radius: cfg.radius,
+        hp: cfg.hp
+      });
+    }
+
+    function updateViruses(dt) {
+      // Los virus siempre siguen cayendo, incluso en bossBattle
+      viruses.forEach(v => v.y += VIRUS_CONFIG[v.type].speed * dt);
+      viruses = viruses.filter(v => {
+        if (v.y - v.radius > canvas.height + 20) {
+          applyVirusDamage(v.type);
+          return false;
+        }
+        return true;
+      });
+
+      // En bossBattle no generamos nuevos virus
+      if (bossBattle) return;
+
+      virusSpawnTimer += dt;
+      if (virusSpawnTimer >= currentSpawnInterval()) {
+        virusSpawnTimer = 0;
+        spawnVirus();
+      }
+    }
+
+    function drawViruses() {
+      viruses.forEach(v => {
+        const cfg = VIRUS_CONFIG[v.type];
+        const g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, cfg.radius);
+        g.addColorStop(0, "#00ffe0");
+        g.addColorStop(1, "#00b1ff");
+
+        ctx.beginPath();
+        ctx.fillStyle = g;
+        ctx.arc(v.x, v.y, cfg.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = "#001827";
+        ctx.arc(v.x, v.y, cfg.radius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ========= BALAS DEL DOCTOR =========
+    const BULLET_SPEED = 320;
+    let bullets = [];
+
+    const upgrades = { regen: false, cone: false, beam: false };
+    let killsSinceRegen = 0;
+
+    // control general del tiempo para cooldown del rayo
+    let elapsedTime = 0;
+    let lastBeamShotTime = -999; // para que pueda usarse inmediatamente al conseguirlo
+
+    function shoot() {
+      if (gameOver) return;
+
+      const toAdd = [];
+
+      // bala principal
+      toAdd.push({
+        x: doctor.x,
+        y: doctor.y - 18,
+        vx: 0,
+        vy: -BULLET_SPEED,
+        radius: 4,
+        damage: 1
+      });
+
+      // disparo en cono
+      if (upgrades.cone) {
+        const baseAngle = -Math.PI / 2;
+        const spread = 0.38;
+        const angles = [baseAngle - spread, baseAngle + spread];
+        for (const a of angles) {
+          toAdd.push({
+            x: doctor.x,
+            y: doctor.y - 18,
+            vx: Math.cos(a) * BULLET_SPEED,
+            vy: Math.sin(a) * BULLET_SPEED,
+            radius: 4,
+            damage: 1
+          });
+        }
+      }
+
+      // rayo: 3 columnas rectas, solo 1 vez cada 2 segundos
+      if (upgrades.beam && elapsedTime - lastBeamShotTime >= 2) {
+        lastBeamShotTime = elapsedTime;
+
+        const spacing = 10;
+        const cols = [-1, 0, 1];   // 3 columnas
+        const rows = 3;
+        for (let r = 0; r < rows; r++) {
+          const rowOffsetY = -22 - r * 8;
+          for (const c of cols) {
+            toAdd.push({
+              x: doctor.x + c * spacing,
+              y: doctor.y + rowOffsetY,
+              vx: 0,
+              vy: -BULLET_SPEED * 1.1,
+              radius: 3,
+              damage: 3
+            });
+          }
+        }
+      }
+
+      bullets.push(...toAdd);
+    }
+
+    function updateBullets(dt) {
+      bullets.forEach(b => {
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+      });
+      bullets = bullets.filter(b =>
+        b.y + b.radius > -20 &&
+        b.y - b.radius < canvas.height + 20 &&
+        b.x + b.radius > -20 &&
+        b.x - b.radius < canvas.width + 20
+      );
+    }
+
+    function drawBullets() {
+      bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.fillStyle = "#f97316";
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = "#fed7aa";
+        ctx.arc(b.x - 1, b.y - 1, b.radius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ========= ITEMS =========
+    const ITEM_ORDER = ["heal", "regen", "cone", "beam"];
+    let items = [];
+    let nextItemIndex = 0;
+
+    function spawnItem(kind) {
+      items.push({
+        kind,
+        x: 30 + Math.random() * (canvas.width - 60),
+        y: -20,
+        radius: 10,
+        speed: 35
+      });
+    }
+
+    function updateItems(dt) {
+      items.forEach(it => {
+        it.y += it.speed * dt;
+        if (it.y - it.radius > canvas.height + 25) {
+          it.y = -20;
+          it.x = 30 + Math.random() * (canvas.width - 60);
+        }
+      });
+    }
+
+    function drawItems() {
+      items.forEach(it => {
+        ctx.beginPath();
+        if (it.kind === "heal") ctx.fillStyle = "#22c55e";
+        else if (it.kind === "regen") ctx.fillStyle = "#38bdf8";
+        else if (it.kind === "cone") ctx.fillStyle = "#eab308";
+        else ctx.fillStyle = "#f97316";
+
+        ctx.arc(it.x, it.y, it.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#020617";
+        ctx.font = "10px system-ui";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(it.kind[0].toUpperCase(), it.x, it.y + 0.5);
+      });
+    }
+
+    function applyItem(kind) {
+      if (kind === "heal") {
+        doctor.hp = doctor.maxHp;
+      } else if (kind === "regen") {
+        upgrades.regen = true;
+      } else if (kind === "cone") {
+        upgrades.cone = true;
+      } else if (kind === "beam") {
+        upgrades.beam = true;
+      }
+      updateLifeUI();
+    }
+
+    // ========= BOSSES =========
+    let bosses = [];
+    let bossBullets = [];
+    let bossFlags = { 4: false, 8: false, 12: false };
+    let bossBattle = false;
+
+    const MAX_LEVEL = 12;
+
+    function createBoss(pattern, maxHp) {
+      return {
+        x: canvas.width / 2,
+        y: -40,
+        radius: 30,
+        hp: maxHp,
+        maxHp,
+        pattern,
+        dirX: Math.random() < 0.5 ? -1 : 1,
+        speedX: 40,
+        speedY: 10,    // baja muy lento
+        shootTimer: 0,
+        shootInterval: 2.6,
+        revivedOnce: false,
+        hitsOnPlayer: 0
+      };
+    }
+
+    function spawnBossForLevel(lvl) {
+      if (lvl === 4) {
+        bosses.push(createBoss("cone", 100));
+      } else if (lvl === 8) {
+        bosses.push(createBoss("beam", 100));
+      } else if (lvl === 12) {
+        // jefes finales: 150% más vida (300)
+        bosses.push(createBoss("cone", 300));
+        bosses.push(createBoss("beam", 300));
+      }
+      bossBattle = bosses.length > 0;
+    }
+
+    function bossShoot(b) {
+      const cx = b.x;
+      const cy = b.y + b.radius * 0.4;
+
+      if (b.pattern === "cone") {
+        const base = Math.PI / 2;
+        const spread = 0.35;
+        const angles = [base, base - spread, base + spread];
+        for (const a of angles) {
+          bossBullets.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(a) * 120,
+            vy: Math.sin(a) * 120,
+            radius: 5,
+            damage: 2
+          });
+        }
+      } else if (b.pattern === "beam") {
+        const spacing = 16;
+        const offsets = [-spacing, 0, spacing]; // 3 columnas
+        for (const off of offsets) {
+          bossBullets.push({
+            x: cx + off,
+            y: cy,
+            vx: 0,
+            vy: 150,
+            radius: 4,
+            damage: 2
+          });
+        }
+      }
+    }
+
+    function updateBosses(dt) {
+      if (!bossBattle) return;
+
+      bosses.forEach(b => {
+        if (b.y < 80) {
+          b.y += b.speedY * dt;
+        } else {
+          b.x += b.dirX * b.speedX * dt;
+          if (b.x - b.radius < 20 || b.x + b.radius > canvas.width - 20) {
+            b.dirX *= -1;
+          }
+        }
+
+        b.shootTimer += dt;
+        if (b.shootTimer >= b.shootInterval) {
+          b.shootTimer = 0;
+          bossShoot(b);
+        }
+      });
+
+      // Lógica de regeneración de bosses
+      bosses = bosses.filter(b => {
+        if (b.hp <= 0) {
+          const canRevive =
+            !b.revivedOnce &&
+            (
+              (level === 4 && b.pattern === "cone") ||
+              (level === 12)
+            );
+
+          if (canRevive) {
+            b.revivedOnce = true;
+            b.hp = b.maxHp;   // se regenera al 100%
+            return true;
+          }
+          return false;
+        }
+        return true;
+      });
+
+      if (bosses.length === 0) {
+        bossBattle = false;
+        if (level === MAX_LEVEL && bossFlags[12] && !hasCompletedGame) {
+          triggerVictory();
+        }
+      }
+    }
+
+    function drawBosses() {
+      bosses.forEach(b => {
+        const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius);
+        g.addColorStop(0, "#facc15");
+        g.addColorStop(1, "#f97316");
+
+        ctx.beginPath();
+        ctx.fillStyle = g;
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        const barW = b.radius * 2;
+        const barH = 4;
+        const lifeFrac = Math.max(0, b.hp / b.maxHp);
+        const bx = b.x - barW / 2;
+        const by = b.y - b.radius - 10;
+
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(bx, by, barW, barH);
+        ctx.fillStyle = "#22c55e";
+        ctx.fillRect(bx, by, barW * lifeFrac, barH);
+      });
+    }
+
+    function updateBossBullets(dt) {
+      bossBullets.forEach(bb => {
+        bb.x += bb.vx * dt;
+        bb.y += bb.vy * dt;
+      });
+      bossBullets = bossBullets.filter(bb =>
+        bb.y - bb.radius < canvas.height + 20 &&
+        bb.y + bb.radius > -20 &&
+        bb.x + bb.radius > -20 &&
+        bb.x - bb.radius < canvas.width + 20
+      );
+    }
+
+    function drawBossBullets() {
+      bossBullets.forEach(bb => {
+        ctx.beginPath();
+        ctx.fillStyle = "#facc15";
+        ctx.arc(bb.x, bb.y, bb.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ========= VIDA / DAÑO =========
+    function applyVirusDamage(type) {
+      const d = VIRUS_CONFIG[type].damage;
+      applyDamage(d);
+    }
+
+    function applyDamage(amount) {
+      if (gameOver) return;
+      doctor.hp -= amount;
+      if (doctor.hp <= 0) {
+        doctor.hp = 0;
+        endGame();
+      }
+      updateLifeUI();
+    }
+
+    function updateLifeUI() {
+      const frac = Math.max(0, doctor.hp / doctor.maxHp);
+      lifeFillEl.style.width = (frac * 100).toFixed(1) + "%";
+    }
+
+    // ========= COLISIONES =========
+    function distanceSq(ax, ay, bx, by) {
+      const dx = ax - bx;
+      const dy = ay - by;
+      return dx * dx + dy * dy;
+    }
+
+    let score = 0;
+    let level = 1;
+    let timeInLevel = 0;
+    let gameOver = false;
+
+    let hasCompletedGame = false;
+    let awaitingEndless = false;
+    let endlessMode = false;
+
+    function handleCollisions() {
+      if (gameOver) return;
+
+      // balas vs virus
+      outerVirus:
+      for (let i = viruses.length - 1; i >= 0; i--) {
+        const v = viruses[i];
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          const r = v.radius + b.radius;
+          if (distanceSq(v.x, v.y, b.x, b.y) <= r * r) {
+            v.hp -= b.damage;
+            bullets.splice(j, 1);
+            if (v.hp <= 0) {
+              const cfg = VIRUS_CONFIG[v.type];
+              score += cfg.score;
+              scoreEl.textContent = score;
+              if (upgrades.regen) {
+                killsSinceRegen++;
+                if (killsSinceRegen >= 4) {
+                  killsSinceRegen = 0;
+                  doctor.hp = Math.min(doctor.maxHp, doctor.hp + 1);
+                  updateLifeUI();
+                }
+              }
+              viruses.splice(i, 1);
+            }
+            continue outerVirus;
+          }
+        }
+      }
+
+      // balas vs bosses
+      for (let i = bosses.length - 1; i >= 0; i--) {
+        const bss = bosses[i];
+        for (let j = bullets.length - 1; j >= 0; j--) {
+          const b = bullets[j];
+          const r = bss.radius + b.radius;
+          if (distanceSq(bss.x, bss.y, b.x, b.y) <= r * r) {
+            bss.hp -= b.damage;
+            bullets.splice(j, 1);
+          }
+        }
+      }
+
+      // virus vs doctor → muerte instantánea
+      for (let i = viruses.length - 1; i >= 0; i--) {
+        const v = viruses[i];
+        const r = v.radius + doctor.radius;
+        if (distanceSq(v.x, v.y, doctor.x, doctor.y) <= r * r) {
+          viruses.splice(i, 1);
+          applyDamage(doctor.maxHp);
+        }
+      }
+
+      // bosses vs doctor (daño normal)
+      bosses.forEach(b => {
+        const r = b.radius + doctor.radius;
+        if (distanceSq(b.x, b.y, doctor.x, doctor.y) <= r * r) {
+          applyDamage(4);
+        }
+      });
+
+      // balas de boss vs doctor
+      for (let i = bossBullets.length - 1; i >= 0; i--) {
+        const bb = bossBullets[i];
+        const r = bb.radius + doctor.radius;
+        if (distanceSq(bb.x, bb.y, doctor.x, doctor.y) <= r * r) {
+          bossBullets.splice(i, 1);
+          applyDamage(bb.damage);
+          bosses.forEach(b => {
+            if (b.pattern === "beam" && level >= 8) {
+              b.hitsOnPlayer++;
+              if (b.hitsOnPlayer >= 3) {
+                b.hitsOnPlayer = 0;
+                b.hp = Math.min(b.maxHp, b.hp + 40);
+              }
+            }
+          });
+        }
+      }
+
+      // items vs doctor
+      for (let i = items.length - 1; i >= 0; i--) {
+        const it = items[i];
+        const r = it.radius + doctor.radius;
+        if (distanceSq(it.x, it.y, doctor.x, doctor.y) <= r * r) {
+          applyItem(it.kind);
+          items.splice(i, 1);
+        }
+      }
+    }
+
+    // ========= NIVELES =========
+    function maybeSpawnItemForLevel(lvl) {
+      if (lvl % 3 !== 0) return;
+      if (nextItemIndex >= ITEM_ORDER.length) return;
+      const kind = ITEM_ORDER[nextItemIndex];
+      nextItemIndex++;
+      spawnItem(kind);
+    }
+
+    function maybeSpawnBossForLevel(lvl) {
+      if ((lvl === 4 || lvl === 8 || lvl === 12) && !bossFlags[lvl]) {
+        bossFlags[lvl] = true;
+        spawnBossForLevel(lvl);
+      }
+    }
+
+    function updateLevel(dt) {
+      timeInLevel += dt;
+
+      // sube de nivel cada 45 segundos
+      if (timeInLevel >= 45) {
+        timeInLevel = 0;
+
+        if (!hasCompletedGame) {
+          if (level < MAX_LEVEL) {
+            level++;
+            levelEl.textContent = level;
+            maybeSpawnItemForLevel(level);
+            maybeSpawnBossForLevel(level);
+          }
+        } else if (endlessMode) {
+          level++;
+          levelEl.textContent = level;
+          maybeSpawnItemForLevel(level); // después del 12 ya no habrá más items nuevos
+        }
+      }
+    }
+
+    // ========= INPUT =========
+    const keys = { left: false, right: false, up: false, down: false };
+
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+
+      // elección tras victoria
+      if (awaitingEndless) {
+        if (k === "c") {
+          // seguir en modo infinito
+          awaitingEndless = false;
+          gameOver = false;
+          endlessMode = true;
+          msgEl.textContent = "🌌 Modo infinito: ¡la dificultad seguirá aumentando!";
+        } else if (k === "v") {
+          // retirarse con victoria
+          awaitingEndless = false;
+          msgEl.textContent = `🏆 ¡Victoria! Puntuación final: ${score}. Pulsa R para volver a jugar.`;
+        }
+        return;
+      }
+
+      if (["arrowleft", "arrowright", "arrowup", "arrowdown", "w", "a", "s", "d"].includes(k)) {
+        e.preventDefault();
+      }
+
+      if (k === "arrowleft" || k === "a") keys.left = true;
+      if (k === "arrowright" || k === "d") keys.right = true;
+      if (k === "arrowup" || k === "w") keys.up = true;
+      if (k === "arrowdown" || k === "s") keys.down = true;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        shoot();
+      }
+
+      if (k === "r") resetGame();
+    });
+
+    window.addEventListener("keyup", (e) => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowleft" || k === "a") keys.left = false;
+      if (k === "arrowright" || k === "d") keys.right = false;
+      if (k === "arrowup" || k === "w") keys.up = false;
+      if (k === "arrowdown" || k === "s") keys.down = false;
+    });
+
+    const dirButtons = document.querySelectorAll(".dir-btn");
+    const dirMap = { left: "left", right: "right", up: "up", down: "down" };
+
+    dirButtons.forEach(btn => {
+      const dir = btn.dataset.dir;
+      const key = dirMap[dir];
+
+      const press = (ev) => {
+        ev.preventDefault();
+        keys[key] = true;
+      };
+      const release = (ev) => {
+        ev.preventDefault();
+        keys[key] = false;
+      };
+
+      ["touchstart", "mousedown"].forEach(ev => btn.addEventListener(ev, press));
+      ["touchend", "touchcancel", "mouseup", "mouseleave"].forEach(ev => btn.addEventListener(ev, release));
+    });
+
+    const shootBtn = document.getElementById("shootBtn");
+    ["touchstart", "mousedown"].forEach(ev =>
+      shootBtn.addEventListener(ev, (e) => { e.preventDefault(); shoot(); })
+    );
+
+    canvas.addEventListener("click", () => {
+      if (gameOver && !awaitingEndless) resetGame();
+    });
+
+    // ========= UPDATE PRINCIPAL =========
+    function updateDoctor(dt) {
+      if (gameOver) return;
+
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.left) dx -= 1;
+      if (keys.right) dx += 1;
+      if (keys.up) dy -= 1;
+      if (keys.down) dy += 1;
+
+      const moving = dx !== 0 || dy !== 0;
+
+      if (moving) {
+        const len = Math.hypot(dx, dy) || 1;
+        dx /= len;
+        dy /= len;
+
+        doctor.x += dx * doctor.speed * dt;
+        doctor.y += dy * doctor.speed * dt;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          doctor.dir = dx < 0 ? "left" : "right";
+        } else {
+          doctor.dir = "up";
+        }
+
+        doctor.animTimer += dt;
+        if (doctor.animTimer >= DOCTOR_ANIM_INTERVAL) {
+          doctor.animTimer = 0;
+          doctor.frameIndex = (doctor.frameIndex + 1) % DOCTOR_FRAMES;
+        }
+      } else {
+        doctor.frameIndex = 1;
+        doctor.animTimer = 0;
+      }
+
+      const margin = 20;
+      doctor.x = Math.max(margin, Math.min(canvas.width - margin, doctor.x));
+      doctor.y = Math.max(margin + 40, Math.min(canvas.height - margin, doctor.y));
+    }
+
+    function endGame() {
+      if (gameOver) return;
+      gameOver = true;
+      msgEl.textContent = "💀 ¡Has sido infectado! Pulsa R o toca la pantalla para reiniciar.";
+    }
+
+    function triggerVictory() {
+      hasCompletedGame = true;
+      awaitingEndless = true;
+      gameOver = true;
+
+      // limpiamos todo lo que queda en pantalla
+      viruses = [];
+      bullets = [];
+      bossBullets = [];
+      items = [];
+
+      msgEl.textContent =
+        "🏆 ¡Has completado el juego! Pulsa C para seguir jugando (modo infinito) o V para retirarte con la victoria.";
+    }
+
+    function resetGame() {
+      score = 0;
+      level = 1;
+      timeInLevel = 0;
+      scoreEl.textContent = "0";
+      levelEl.textContent = "1";
+
+      viruses = [];
+      bullets = [];
+      items = [];
+      nextItemIndex = 0;
+
+      bosses = [];
+      bossBullets = [];
+      bossBattle = false;
+      bossFlags = { 4: false, 8: false, 12: false };
+
+      upgrades.cone = false;
+      upgrades.beam = false;
+      upgrades.regen = false;
+      killsSinceRegen = 0;
+
+      virusSpawnTimer = 0;
+      gameOver = false;
+      msgEl.textContent = "";
+
+      hasCompletedGame = false;
+      awaitingEndless = false;
+      endlessMode = false;
+
+      resetDoctor();
+      updateLifeUI();
+    }
+
+    function update(dt) {
+      if (!dt) return;
+      elapsedTime += dt;
+
+      if (gameOver) return;
+
+      updateDoctor(dt);
+      updateViruses(dt);
+      updateBullets(dt);
+      updateItems(dt);
+      updateBosses(dt);
+      updateBossBullets(dt);
+      handleCollisions();
+      updateLevel(dt);
+    }
+
+    function draw() {
+      const gradient = ctx.createRadialGradient(
+        canvas.width / 2,
+        canvas.height * 0.2,
+        10,
+        canvas.width / 2,
+        canvas.height / 2,
+        canvas.height * 0.8
+      );
+      gradient.addColorStop(0, "#17182f");
+      gradient.addColorStop(1, "#050316");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawViruses();
+      drawItems();
+      drawBullets();
+      drawBossBullets();
+      drawBosses();
+      drawDoctor();
+    }
+
+    let lastTimestamp = 0;
+    function loop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
